@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: heatx-api
+    env: docker
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: ENV
+        value: prod
+      - key: LOG_LEVEL
+        value: INFO
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: MODEL_PATH
+        value: models/trained_model.pkl
+      - key: FEATURE_PATH
+        value: models/feature_names.pkl
+      - key: MODEL_VERSION_FILE
+        value: models/VERSION
