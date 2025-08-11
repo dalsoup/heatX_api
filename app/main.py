@@ -4,10 +4,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import logging
 
-from .core.config import settings
-from .core.logger import init_logging
-from .services.model_service import ModelService
-from .routers import health, predict
+from app.core.config import settings
+from app.core.logger import init_logging
+from app.services.model_service import ModelService
+from app.routers import health, predict
 
 log = logging.getLogger(__name__)
 
@@ -20,13 +20,10 @@ async def lifespan(app: FastAPI):
         app.state.model_service = ModelService(
             settings.MODEL_PATH, settings.FEATURE_PATH, settings.MODEL_VERSION_FILE
         )
-        log.info(
-            "Model loaded",
-            extra={"extra": {"model_version": app.state.model_service.version}}
-        )
+        log.info("Model loaded", extra={"extra": {"model_version": app.state.model_service.version}})
     except Exception as e:
         log.exception("Failed to load model")
-        # allow startup but predict will 500 if used
+        # allow startup but predict will 500
         app.state.model_service = None
     yield
     # Shutdown
