@@ -1,16 +1,9 @@
 from contextlib import asynccontextmanager
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["https://seoul-weatherpay.onrender.com"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 from fastapi.responses import JSONResponse
-import logging
 
 from app.core.config import settings
 from app.core.logger import init_logging
@@ -21,42 +14,47 @@ log = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: init logging & load model once
+    # Startup
     init_logging()
     log.info("Starting HeatX API")
     try:
         app.state.model_service = ModelService(
             settings.MODEL_PATH, settings.FEATURE_PATH, settings.MODEL_VERSION_FILE
         )
-        log.info("Model loaded", extra={"extra": {"model_version": app.state.model_service.version}})
-    except Exception as e:
+        log.info(
+            "Model loaded",
+            extra={"extra": {"model_version": app.state.model_service.version}},
+        )
+    except Exception:
         log.exception("Failed to load model")
-        # allow startup but predict will 500
         app.state.model_service = None
     yield
     # Shutdown
     log.info("Shutting down HeatX API")
 
+# ✅ 먼저 app을 만든다
 app = FastAPI(title="HeatX API", version="1.0.0", lifespan=lifespan)
 
-# CORS (open by default)
+# ✅ CORS는 한 번만 추가 (원하면 특정 도메인만 허용)
+#   - settings.CORS_ORIGINS가 "*" 또는 빈 문자열이면 전체 허용
+allow_origins = (
+    ["*"]
+    if settings.CORS_ORIGINS in ("*", "")
+    else [o.strip() for o in settings.CORS_ORIGINS.split(",")]
+)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.CORS_ORIGINS in ("*", "") else settings.CORS_ORIGINS.split(","),
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Routers
+# 라우터 등록
 app.include_router(health.router)
 app.include_router(predict.router)
 
-# ---- Error handlers ----
+# 에러 핸들러
 @app.exception_handler(ValueError)
 async def value_error_handler(request: Request, exc: ValueError):
-    # Typically raised by feature mapping when a required feature is missing
-    return JSONResponse(
-        status_code=422,
-        content={"detail": str(exc)},
-    )
+    return JSONResponse(status_code=422, content={"detail": str(exc)})
