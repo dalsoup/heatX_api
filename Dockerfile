@@ -18,7 +18,7 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 # 앱 소스
 COPY app ./app
 COPY models ./models
-COPY .env.example ./
+COPY .env
 
 # 기본 포트
 ENV HOST=0.0.0.0
